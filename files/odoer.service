@@ -1,0 +1,17 @@
+[Unit]
+Description=Odoer By mahmoudelshimi@protonmail.ch
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/admin/odoo
+ExecStart=/usr/bin/odoer start
+ExecStop=/usr/bin/odoer stop
+RemainAfterExit=true
+User=admin
+Group=admin
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+[Install]
+WantedBy=multi-user.target

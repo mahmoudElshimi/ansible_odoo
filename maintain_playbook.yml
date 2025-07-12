@@ -1,0 +1,60 @@
+- name: Maintain Odoo server
+  hosts: production
+  become: true
+  vars:
+    remote_backup_dir: "/home/admin/odoo/backups"
+    remote_zip_path: "/home/admin/backups.zip"
+    local_backup_dir: "./backups/{{ inventory_hostname }}"
+  tasks:
+
+    - name: Update 
+      apt:
+        update_cache: yes
+
+    - name: Upgrade security 
+      apt:
+        upgrade: safe
+        update_cache: yes
+      tags: security
+
+    - name: Run odoer backup
+      become_user: admin
+      shell: "odoer backup"
+      args:
+        chdir: /home/admin
+
+    - name: Archive backups folder into ZIP
+      become_user: admin
+      shell: |
+        zip -r {{ remote_zip_path }} {{ remote_backup_dir }}
+      args:
+        chdir: /home/admin
+
+    - name: Create dated name for local zip
+      set_fact:
+        local_zip_name: "backups_{{ ansible_date_time.iso8601_basic_short }}.zip"
+
+    - name: Ensure local backup destination exists
+      file:
+        path: "{{ local_backup_dir }}"
+        state: directory
+        recurse: yes
+        owner: "{{ lookup('env', 'USER') }}"
+        group: "{{ lookup('env', 'USER') }}"
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: Pull zip backup using scp
+      ansible.builtin.shell: >
+        scp -i {{ ansible_ssh_private_key_file }}
+        -o StrictHostKeyChecking=no
+        -o UserKnownHostsFile=/dev/null
+        admin@{{ inventory_hostname }}:/home/admin/backups.zip
+        {{ local_backup_dir }}/{{ local_zip_name }}
+      delegate_to: localhost
+
+    - name: Remove remote zip archive
+      become_user: admin
+      file:
+        path: "{{ remote_zip_path }}"
+        state: absent

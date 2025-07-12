@@ -1,0 +1,65 @@
+- name: Deploy Nginx+SSL for Odoo iff domain 
+  hosts: deploy 
+  become: true
+  tasks:
+    - name: Remove old nginx default config (if any)
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Remove old odoo config link (if any)
+      file:
+        path: /etc/nginx/sites-enabled/odoo.conf
+        state: absent
+
+
+    - name: Install certbot and nginx plugin
+      apt:
+        name:
+          - certbot
+          - python3-certbot-nginx
+        state: latest
+
+    - name: Obtain SSL certificate with Certbot
+      command: >
+        certbot certonly --nginx
+        --non-interactive
+        --agree-tos
+        --email mahmoudelshimi@protonmail.ch
+        -d {{ inventory_hostname }}
+      args:
+        creates: "/etc/letsencrypt/live/{{ inventory_hostname }}/fullchain.pem"
+
+    - name: Copy production Nginx config with the cust's domain
+      template:
+        src: files/odoo_nginx_deploy.conf.j2
+        dest: /etc/nginx/sites-available/odoo.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Enable new odoo nginx config
+      file:
+        src: /etc/nginx/sites-available/odoo.conf
+        dest: /etc/nginx/sites-enabled/odoo.conf
+        state: link
+        force: true
+
+    - name: Test nginx configuration
+      command: nginx -t
+      register: nginx_test
+      failed_when: "'successful' not in nginx_test.stderr"
+
+    - name: Reload nginx
+      service:
+        name: nginx
+        state: reloaded
+
+    - name: Add Certbot auto-renew cron job to /etc/crontab (as root)
+      lineinfile:
+        path: /etc/crontab
+        line: "0 0,12 * * * root /usr/bin/python3  -c 'import random; import time; time.sleep(random.random() * 3600)' && sudo certbot renew -q"
+        state: present
+        create: yes
+        insertafter: EOF
+

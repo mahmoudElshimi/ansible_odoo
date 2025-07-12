@@ -1,0 +1,236 @@
+- name: Odoo INIT
+  hosts: init 
+  become: true
+  tasks:
+    - name: Set target hostname to inventory_hostname(cust's domain)
+      hostname:
+        name: "{{ inventory_hostname }}"
+
+    - name: Update 
+      apt:
+        update_cache: yes
+
+    - name: Upgrade
+      apt:
+        upgrade: dist 
+
+    - name: Autoremove 
+      apt:
+        autoremove: yes
+
+    - name: Install base packages
+      apt:
+        name:
+          - vim
+          - tmux
+          - zsh
+          - zsh-syntax-highlighting
+          - nnn
+          - certbot
+          - git
+          - rsync
+          - htop
+          - docker-compose
+          - wget
+          - cron
+          - nginx
+          - firewalld
+          - certbot
+          - ccze
+          - zip
+          - unzip
+        state: latest
+
+    - name: Enable and start firewalld 
+      service:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Enable and start docker
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Enable and start nginx 
+      service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Allow HTTP in firewalld
+      ansible.posix.firewalld:
+        service: http
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+    - name: Allow HTTPS in firewalld
+      ansible.posix.firewalld:
+        service: https
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+    - name: Reload firewalld
+      command: firewall-cmd --reload
+
+    - name: Add admin to docker group
+      user:
+        name: admin
+        groups: docker
+        append: yes
+
+    - name: Restart Docker
+      service:
+        name: docker
+        state: restarted
+
+    - name: Nginx temp config with target machine's IP
+      template:
+        src: files/odoo_nginx.conf.j2
+        dest: /etc/nginx/sites-available/odoo.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Enable odoo site in nginx
+      file:
+        src: /etc/nginx/sites-available/odoo.conf
+        dest: /etc/nginx/sites-enabled/odoo.conf
+        state: link
+        force: yes
+
+    - name: Remove default nginx site if exists
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Test nginx configuration
+      command: nginx -t
+      register: nginx_test
+      failed_when: "'successful' not in nginx_test.stderr"
+
+    - name: Reload nginx
+      service:
+        name: nginx
+        state: reloaded
+
+    - name: Clone odoer repo as odoo dir
+      git:
+        repo: https://github.com/mahmoudElshimi/odoer.git
+        dest: /home/admin/odoo/
+
+    - name: Make odoer executable
+      file:
+        path: /home/admin/odoo/odoer
+        mode: '0755'
+
+    - name: Move odoer to /usr/bin
+      command: mv /home/admin/odoo/odoer /usr/bin
+      args:
+        creates: /usr/bin/odoer
+
+    - name: copy odoer systemd service
+      copy:
+        src: files/odoer.service
+        dest: /etc/systemd/system/odoer.service
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Reload systemd to recognize odoer.service 
+      command: systemctl daemon-reexec
+
+    - name: Enable odoer service (but not start)
+      systemd:
+        name: odoer.service
+        enabled: true
+        state: stopped
+
+    - name: Copy extra-addons.zip to target
+      copy:
+        src: files/extra-addons.zip
+        dest: /home/admin/extra-addons.zip
+
+    - name: Unzip extra-addons.zip into "odoo/extra-addons" dir 
+      command: unzip /home/admin/extra-addons.zip -d /home/admin/odoo/extra-addons/
+
+    - name: Remove extra-addons.zip after extraction
+      file:
+        path: /home/admin/extra-addons.zip
+        state: absent
+
+    - name: Copy default backups to target
+      copy:
+        src: backups/backups.zip
+        dest: /home/admin/backups.zip
+
+    - name: Unzip backups.zip into "odoo/backups" dir 
+      command: unzip /home/admin/backups.zip -d /home/admin/odoo/backups/
+
+    - name: Remove backups.zip after extraction
+      file:
+        path: /home/admin/backups.zip
+        state: absent
+
+    - name: Copy dotfiles 
+      copy:
+        src: files/dotfiles/
+        dest: /home/admin/
+        owner: admin
+        group: admin
+        mode: preserve
+
+    - name: Set zsh as default shell for admin
+      user:
+        name: admin
+        shell: /usr/bin/zsh
+
+    - name: Ensure /home/admin has correct ownership
+      file:
+        path: /home/admin
+        state: directory
+        recurse: yes
+        owner: admin
+        group: admin
+
+    - name: Run `odoer init` as admin
+      become: true
+      become_user: admin
+      command: odoer -p {{ odoer_password }} init
+      args:
+        chdir: /home/admin
+
+    - name: Run `odoer -p PASS up` as admin
+      become: true
+      become_user: admin
+      command: odoer -p {{ odoer_password }} up
+      args:
+        chdir: /home/admin
+
+    - name: Sleep till odoo up 
+      pause:
+        seconds: 20
+
+    - name: Run `odoer -p PASS addon` as admin
+      become: true
+      become_user: admin
+      command: odoer -p {{ odoer_password }} addon
+      args:
+        chdir: /home/admin
+
+    - name: Run `odoer -p PASS import backup_file` as root
+      command: odoer -p {{ odoer_password }} import odoo/backups/{{ backup_file | default('base-full-conf-03-07-25-08-32-03') }}
+      args:
+        chdir: /home/admin
+
+    - name: ReEnsure ownership of /home/admin and all its dirs
+      become: true
+      file:
+        path: /home/admin
+        owner: admin
+        group: admin
+        recurse: yes
+
