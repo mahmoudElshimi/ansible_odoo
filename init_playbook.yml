@@ -156,13 +156,12 @@
         name: zip
         state: present
 
-    - name: Create extra-addons.zip from local files/extra-addons/*
+    - name: Create extra-addons.zip from LOCAL 'files/extra-addons/'
       delegate_to: localhost
       run_once: true
       args:
-        chdir: files
-      shell: zip -r extra-addons.zip extra-addons/*
-
+        chdir: files/extra-addons
+      shell: zip -r ../extra-addons.zip ./*
 
     - name: Copy extra-addons.zip to target
       copy:
