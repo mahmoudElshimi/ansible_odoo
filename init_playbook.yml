@@ -149,6 +149,21 @@
         enabled: true
         state: stopped
 
+    - name: Ensure 'zip' is installed on localhost
+      become: true
+      delegate_to: localhost
+      package:
+        name: zip
+        state: present
+
+    - name: Create extra-addons.zip from local files/extra-addons/*
+      delegate_to: localhost
+      run_once: true
+      args:
+        chdir: files
+      shell: zip -r extra-addons.zip extra-addons/*
+
+
     - name: Copy extra-addons.zip to target
       copy:
         src: files/extra-addons.zip
