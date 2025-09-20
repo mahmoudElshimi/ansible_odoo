@@ -192,6 +192,22 @@
         group: admin
         mode: preserve
 
+    - name: Ensure nvim config directory exists
+      file:
+        path: /home/admin/.config/nvim
+        state: directory
+        owner: admin
+        group: admin
+        mode: "0755"
+
+    - name: Copy init.lua to nvim config
+      copy:
+        src: files/dotfiles/init.lua
+        dest: /home/admin/.config/nvim/init.lua
+        owner: admin
+        group: admin
+        mode: "0644"
+
     - name: Set zsh as default shell for admin
       user:
         name: admin
