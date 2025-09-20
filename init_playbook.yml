@@ -1,20 +1,20 @@
 - name: Odoo INIT
-  hosts: init 
+  hosts: init
   become: true
   tasks:
     - name: Set target hostname to inventory_hostname(cust's domain)
       hostname:
         name: "{{ inventory_hostname }}"
 
-    - name: Update 
+    - name: Update
       apt:
         update_cache: yes
 
     - name: Upgrade
       apt:
-        upgrade: dist 
+        upgrade: dist
 
-    - name: Autoremove 
+    - name: Autoremove
       apt:
         autoremove: yes
 
@@ -39,9 +39,11 @@
           - ccze
           - zip
           - unzip
+          - npm
+          - python3-pip
         state: latest
 
-    - name: Enable and start firewalld 
+    - name: Enable and start firewalld
       service:
         name: firewalld
         state: started
@@ -53,7 +55,7 @@
         state: started
         enabled: true
 
-    - name: Enable and start nginx 
+    - name: Enable and start nginx
       service:
         name: nginx
         state: started
@@ -93,7 +95,7 @@
         dest: /etc/nginx/sites-available/odoo.conf
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
     - name: Enable odoo site in nginx
       file:
@@ -125,7 +127,7 @@
     - name: Make odoer executable
       file:
         path: /home/admin/odoo/odoer
-        mode: '0755'
+        mode: "0755"
 
     - name: Move odoer to /usr/bin
       command: mv /home/admin/odoo/odoer /usr/bin
@@ -138,9 +140,9 @@
         dest: /etc/systemd/system/odoer.service
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
-    - name: Reload systemd to recognize odoer.service 
+    - name: Reload systemd to recognize odoer.service
       command: systemctl daemon-reexec
 
     - name: Enable odoer service (but not start)
@@ -148,13 +150,6 @@
         name: odoer.service
         enabled: true
         state: stopped
-
-    - name: Ensure 'zip' is installed on localhost
-      become: true
-      delegate_to: localhost
-      package:
-        name: zip
-        state: present
 
     - name: Create extra-addons.zip from LOCAL 'files/extra-addons/'
       delegate_to: localhost
@@ -168,7 +163,7 @@
         src: files/extra-addons.zip
         dest: /home/admin/extra-addons.zip
 
-    - name: Unzip extra-addons.zip into "odoo/extra-addons" dir 
+    - name: Unzip extra-addons.zip into "odoo/extra-addons" dir
       command: unzip /home/admin/extra-addons.zip -d /home/admin/odoo/extra-addons/
 
     - name: Remove extra-addons.zip after extraction
@@ -181,7 +176,7 @@
         src: backups/backups.zip
         dest: /home/admin/backups.zip
 
-    - name: Unzip backups.zip into "odoo/backups" dir 
+    - name: Unzip backups.zip into "odoo/backups" dir
       command: unzip /home/admin/backups.zip -d /home/admin/odoo/backups/
 
     - name: Remove backups.zip after extraction
@@ -189,7 +184,7 @@
         path: /home/admin/backups.zip
         state: absent
 
-    - name: Copy dotfiles 
+    - name: Copy dotfiles
       copy:
         src: files/dotfiles/
         dest: /home/admin/
@@ -224,7 +219,7 @@
       args:
         chdir: /home/admin
 
-    - name: Sleep till odoo up 
+    - name: Sleep till odoo up
       pause:
         seconds: 20
 
@@ -247,4 +242,3 @@
         owner: admin
         group: admin
         recurse: yes
-
