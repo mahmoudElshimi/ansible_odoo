@@ -660,7 +660,11 @@ require('lazy').setup({
       -- You can press `g?` for help in this menu.
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
-        -- You can add other tools here that you want Mason to install
+        'debugpy',
+        'pyright',
+        'ruff',
+        'black',
+        'mypy',
       })
 
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
@@ -851,6 +855,77 @@ require('lazy').setup({
     ---@diagnostic disable-next-line: missing-fields
     opts = { signs = false },
   },
+  -- Add Debug
+  {
+    'mfussenegger/nvim-dap',
+    dependencies = {
+      'nvim-neotest/nvim-nio',
+      'rcarriga/nvim-dap-ui',
+      'mfussenegger/nvim-dap-python',
+      'theHamsta/nvim-dap-virtual-text',
+    },
+    config = function()
+      local dap = require 'dap'
+      local dapui = require 'dapui'
+      local dap_python = require 'dap-python'
+
+      require('dapui').setup {}
+      require('nvim-dap-virtual-text').setup {
+        commented = true, -- Show virtual text alongside comment
+      }
+
+      local mason_path = vim.fn.stdpath 'data' .. '/mason/packages/debugpy/venv/bin/python'
+      dap_python.setup(mason_path)
+
+      vim.fn.sign_define('DapBreakpoint', {
+        text = '',
+        texthl = 'DiagnosticSignError',
+        linehl = '',
+        numhl = '',
+      })
+
+      vim.fn.sign_define('DapBreakpointRejected', {
+        text = '', -- or "❌"
+        texthl = 'DiagnosticSignError',
+        linehl = '',
+        numhl = '',
+      })
+
+      vim.fn.sign_define('DapStopped', {
+        text = '', -- or "→"
+        texthl = 'DiagnosticSignWarn',
+        linehl = 'Visual',
+        numhl = 'DiagnosticSignWarn',
+      })
+
+      -- Automatically open/close DAP UI
+      dap.listeners.after.event_initialized['dapui_config'] = function() dapui.open() end
+
+      local opts = { noremap = true, silent = true }
+
+      -- Toggle breakpoint
+      vim.keymap.set('n', '<leader>db', function() dap.toggle_breakpoint() end, opts)
+
+      -- Continue / Start
+      vim.keymap.set('n', '<leader>dc', function() dap.continue() end, opts)
+
+      -- Step Over
+      vim.keymap.set('n', '<leader>do', function() dap.step_over() end, opts)
+
+      -- Step Into
+      vim.keymap.set('n', '<leader>di', function() dap.step_into() end, opts)
+
+      -- Step Out
+      vim.keymap.set('n', '<leader>dO', function() dap.step_out() end, opts)
+
+      -- Keymap to terminate debugging
+      vim.keymap.set('n', '<leader>dq', function() require('dap').terminate() end, opts)
+
+      -- Toggle DAP UI
+      vim.keymap.set('n', '<leader>du', function() dapui.toggle() end, opts)
+    end,
+  },
+
   -- Add nerdtree like
   {
     'nvim-neo-tree/neo-tree.nvim',
