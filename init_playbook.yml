@@ -41,6 +41,15 @@
           - unzip
           - npm
           - python3-pip
+          - make
+          - gcc
+          - ripgrep
+          - fd-find
+          - tree-sitter-cli
+          - xclip
+          - curl
+
+
         state: latest
 
     - name: Enable and start firewalld
