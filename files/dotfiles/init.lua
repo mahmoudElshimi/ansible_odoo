@@ -923,6 +923,43 @@ require('lazy').setup({
 
       -- Toggle DAP UI
       vim.keymap.set('n', '<leader>du', function() dapui.toggle() end, opts)
+      --[[
+      -- Allow debug in docker, but that's fucking bad, use pdb instade
+      dap.adapters['python-remote'] = {
+        type = 'server',
+        host = 'localhost',
+        port = 5678,
+        options = {
+          source_filetype = 'python',
+        },
+      }
+
+      -- Add the remote configuration to the list of Python configurations
+      -- (the table dap.configurations.python will be created automatically by dap-python)
+      dap.configurations.python = dap.configurations.python or {}
+      table.insert(dap.configurations.python, {
+        type = 'python-remote',
+        request = 'attach',
+        connect = {
+          host = 'localhost',
+          port = 5678,
+        },
+        mode = 'remote',
+        name = 'Attach to Odoo in Docker',
+        redirectOutput = true,
+        justMyCode = false,   -- set to true if you only want to debug your own addons
+        pathMappings = {
+          --{
+           -- localRoot = vim.fn.getcwd() .. '/odoo/addons',
+            --remoteRoot = '/usr/lib/python3/dist-packages/odoo/addons',
+          --},
+          {
+            localRoot = vim.fn.getcwd() .. '/extra-addons',
+            remoteRoot = '/mnt/extra-addons',
+          },
+        },
+      })
+      --]]
     end,
   },
 
