@@ -855,6 +855,8 @@ require('lazy').setup({
     ---@diagnostic disable-next-line: missing-fields
     opts = { signs = false },
   },
+  -- Add AI Completion
+  { 'github/copilot.vim' },
   -- Add Debug
   {
     'mfussenegger/nvim-dap',
