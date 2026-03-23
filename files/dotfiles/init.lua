@@ -855,6 +855,26 @@ require('lazy').setup({
     ---@diagnostic disable-next-line: missing-fields
     opts = { signs = false },
   },
+  -- Add comment
+  {
+    'numToStr/Comment.nvim',
+    event = 'VeryLazy',
+    config = function()
+      require('Comment').setup {
+        -- You can customize options here; defaults are good for most users.
+        -- See :help Comment.nvim for all options.
+        toggler = {
+          line = 'gcc', -- toggle comment on current line
+          block = 'gbc', -- toggle comment on selected block (visual)
+        },
+        opleader = {
+          line = 'gc', -- comment motion (e.g., `gc3j` comments 3 lines down)
+          block = 'gb',
+        },
+        -- You can also set `padding = true` to add spaces around comment delimiters
+      }
+    end,
+  },
   -- Add AI Completion
   { 'github/copilot.vim' },
   -- Add OpenCode
