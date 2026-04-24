@@ -30,6 +30,7 @@
           - git
           - rsync
           - htop
+          - docker.io
           - docker-compose
           - wget
           - cron
@@ -48,7 +49,6 @@
           - tree-sitter-cli
           - xclip
           - curl
-
 
         state: latest
 
